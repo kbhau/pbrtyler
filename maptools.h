@@ -13,6 +13,7 @@ class MapTools
 {
 public:
 	unsigned int src_w;
+	unsigned int src_h;
 	unsigned int w;
 	unsigned int h;
 
@@ -21,9 +22,9 @@ public:
 		return y * w + x;
 	}
 
-	inline int _ii(int x, int y, int x_offset)
+	inline int _ii(int x, int y, int x_offset, int y_offset)
 	{
-		return y * src_w + x + x_offset;
+		return (y + y_offset) * src_w + (x + x_offset);
 	}
 
 
@@ -118,7 +119,7 @@ public:
 	}
 
 
-	void copy_from_wide_map(PBRMap& src, PBRMap& dst, int x_offset)
+	void copy_from_wide_map(PBRMap& src, PBRMap& dst, int x_offset, int y_offset)
 	{
 		OP("Copy from wide map begin.");
 		std::vector<float> placeholder;
@@ -129,7 +130,7 @@ public:
 				dst,
 				placeholder,
 				placeholder,
-				_ii(x, y, x_offset),
+				_ii(x, y, x_offset, y_offset),
 				_i(x, y),
 				1.f,
 				false

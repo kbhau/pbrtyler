@@ -3,17 +3,18 @@
 // PBR TYLER
 // ----------------------------------------------------------------------------
 // 
-// Takes 3x by 1x PBR texture renders and turns them into 1x by 1x seamless
+// Takes 2x by 2x PBR texture renders and turns them into 1x by 1x seamless
 // textures.
 // 
-// The source map is cut into 3 pieces:
+// The source map is cut into 4 pieces:
 // - base source
 // - corners source
-// - edges source
+// - up/down edge source
+// - left/right edge source
 // 
 // Corner and edge pieces are cut through the middle where the picture is
-// seamless and putting it where the seams are. Having 3x the source might be
-// excessive but it guarantees no repetition (false: edges ud and lr repeated).
+// seamless and put it where the seams are. Having 4x the source might be
+// excessive but it guarantees no repetition of the source material.
 // 
 // Required maps:
 // - _d - diffuse colour (RGBA) - Alpha currently not tested.
@@ -46,8 +47,8 @@
 // TODO
 // ----------------------------------------------------------------------------
 //
+// - change input from 3x1 to 2x2 to differentiate edges ud and lr <--
 // - include alpha in the factor compute
-// - change input from 3x1 to 2x2 to differentiate edges ud and lr
 // 
 // ----------------------------------------------------------------------------
 
@@ -88,6 +89,9 @@ vector<float> fac_sc1;
 PBRMap sc2;
 vector<float> fac_sc2;
 
+PBRMap sc3;
+vector<float> fac_sc3;
+
 PBRMap dst;
 vector<float> fac_dst;
 
@@ -124,9 +128,10 @@ int read_source_maps()
 
 	try {
 		load_pbr(input, src, src_w, src_h);
-		w = src_w / 3;
-		h = src_h;
+		w = src_w / 2;
+		h = src_h / 2;
 		mt.src_w = src_w;
+		mt.src_h = src_h;
 		mt.w = w;
 		mt.h = h;
 		OP("w=[" << w << "] h=[" << h << "]");
@@ -144,6 +149,7 @@ void reserve_maps()
 	OP("- Reserve maps.");
 	reserve_pbr(sc1, w, h);
 	reserve_pbr(sc2, w, h);
+	reserve_pbr(sc3, w, h);
 	reserve_pbr(dst, w, h);
 	reserve_pbr(corners, w, h);
 	reserve_pbr(edges, w, h);
@@ -157,6 +163,7 @@ void create_influence_maps()
 	
 	mt.influence_map_corner(fac_sc1);
 	mt.influence_map_edge(fac_sc2);
+	mt.influence_map_edge(fac_sc3);
 
 	mt.influence_map_empty(fac_corners);
 	mt.influence_map_empty(fac_edges);
@@ -169,9 +176,10 @@ void create_influence_maps()
 void split_sources()
 {
 	OP("- Split into working sources.");
-	mt.copy_from_wide_map(src, dst, 0);	// Destination set to 1st source square
-	mt.copy_from_wide_map(src, sc1, w);
-	mt.copy_from_wide_map(src, sc2, w * 2);
+	mt.copy_from_wide_map(src, dst, 0, 0);	// Destination set to 1st source square
+	mt.copy_from_wide_map(src, sc1, w, 0);
+	mt.copy_from_wide_map(src, sc2, 0, h);
+	mt.copy_from_wide_map(src, sc3, w, h);
 	free_pbr(src);
 }
 
@@ -208,12 +216,13 @@ void copy_edges()
 	Vec2 dst_dl = Vec2(0, h/2);
 	mt.copy_chunk(sc2, edges, fac_sc2, fac_edges, src_u, dst_dl);
 	mt.copy_chunk(sc2, edges, fac_sc2, fac_edges, src_d, dst_ul);
+	free_pbr(sc2);
 
 	OP("- Copy edges to l,r temp.");
-	mt.copy_chunk(sc2, edges_lr, fac_sc2, fac_edges_lr, src_l, dst_ur);
-	mt.copy_chunk(sc2, edges_lr, fac_sc2, fac_edges_lr, src_r, dst_ul);
+	mt.copy_chunk(sc3, edges_lr, fac_sc3, fac_edges_lr, src_l, dst_ur);
+	mt.copy_chunk(sc3, edges_lr, fac_sc3, fac_edges_lr, src_r, dst_ul);
 
-	free_pbr(sc2);
+	free_pbr(sc3);
 }
 
 
