@@ -47,7 +47,7 @@
 // TODO
 // ----------------------------------------------------------------------------
 //
-// - change input from 3x1 to 2x2 to differentiate edges ud and lr <--
+// - add low frequency height to break up the join lines
 // - include alpha in the factor compute
 // 
 // ----------------------------------------------------------------------------
@@ -56,6 +56,8 @@
 
 #include <string>
 #include <exception>
+
+#include "FastNoiseLite.h"
 
 #include "argument_reader.h"
 #include "log.h"
@@ -73,6 +75,9 @@ using namespace std;
 
 string input;
 string output;
+bool blur;
+float influence_power = 0.375f;
+float height_noise_factor = 0.5f;
 
 MapTools mt;
 unsigned int src_w = 0U;
@@ -82,6 +87,9 @@ unsigned int h;
 
 
 PBRMap src;
+
+PBRMap base;
+vector<float> fac_base;
 
 PBRMap sc1;
 vector<float> fac_sc1;
@@ -119,6 +127,10 @@ void get_filenames(int argc, char** argv)
 
 	input = get_argument_value("-i", argc, argv);
 	output = get_argument_value("-o", argc, argv);
+	blur = !get_argument_flag("-nb", argc, argv);
+	if (get_argument_flag("-cp", argc, argv)) {
+		influence_power = stof(get_argument_value("-cp", argc, argv));
+	}
 }
 
 
@@ -147,6 +159,7 @@ int read_source_maps()
 void reserve_maps()
 {
 	OP("- Reserve maps.");
+	reserve_pbr(base, w, h);
 	reserve_pbr(sc1, w, h);
 	reserve_pbr(sc2, w, h);
 	reserve_pbr(sc3, w, h);
@@ -161,25 +174,28 @@ void create_influence_maps()
 {
 	OP("- Create influence maps.");
 	
-	mt.influence_map_corner(fac_sc1);
-	mt.influence_map_edge(fac_sc2);
-	mt.influence_map_edge(fac_sc3);
+	mt.influence_map_base(fac_base, influence_power);
+
+	mt.influence_map_corner(fac_sc1, influence_power);
+	mt.influence_map_edge(fac_sc2, influence_power);
+	mt.influence_map_edge(fac_sc3, influence_power);
 
 	mt.influence_map_empty(fac_corners);
 	mt.influence_map_empty(fac_edges);
 	mt.influence_map_empty(fac_edges_lr);
 
-	mt.influence_map_base(fac_dst);
+	mt.influence_map_empty(fac_dst);
 }
 
 
 void split_sources()
 {
 	OP("- Split into working sources.");
-	mt.copy_from_wide_map(src, dst, 0, 0);	// Destination set to 1st source square
+	mt.copy_from_wide_map(src, base, 0, 0);
 	mt.copy_from_wide_map(src, sc1, w, 0);
 	mt.copy_from_wide_map(src, sc2, 0, h);
 	mt.copy_from_wide_map(src, sc3, w, h);
+	mt.copy_from_wide_map(src, dst, w/2, h/2);
 	free_pbr(src);
 }
 
@@ -226,17 +242,37 @@ void copy_edges()
 }
 
 
+void apply_height_noise()
+{
+	OP("- Apply height noise.");
+	FastNoiseLite ns;
+	ns.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+	ns.SetFrequency(1.f / (float)w);
+	ns.SetFractalGain(0.5);
+	ns.SetFractalLacunarity(2.f);
+	ns.SetFractalOctaves(3);
+	
+	std::srand(std::time(0));
+
+	ns.SetSeed(std::rand());
+	mt.apply_height_noise(base, ns, height_noise_factor);
+	ns.SetSeed(std::rand());
+	mt.apply_height_noise(sc1, ns, height_noise_factor);
+	ns.SetSeed(std::rand());
+	mt.apply_height_noise(sc2, ns, height_noise_factor);
+	ns.SetSeed(std::rand());
+	mt.apply_height_noise(sc3, ns, height_noise_factor);
+}
+
+
 void apply_seams_fix()
 {
 	OP("- Blend edges temp to corner temp.");
-	mt.blend_map(edges, corners, fac_edges, fac_corners);
-	mt.blend_map(edges_lr, corners, fac_edges_lr, fac_corners);
-	free_pbr(edges);
-	free_pbr(edges_lr);
-
-	OP("- Blend corner temp to output.");
-	mt.blend_map(corners, dst, fac_corners, fac_dst);
-	free_pbr(corners);
+	mt.blend_map_4_way(dst,
+		base, edges, edges_lr, corners,
+		fac_base, fac_edges, fac_edges_lr, fac_corners,
+		blur
+	);
 }
 
 
@@ -277,6 +313,7 @@ int main(int argc, char** argv)
 	reserve_maps();
 	create_influence_maps();
 	split_sources();
+	apply_height_noise();
 
 	// Perform ops.
 	copy_corners();

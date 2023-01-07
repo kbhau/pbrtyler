@@ -8,6 +8,6 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LocalDebuggerCommand>$(TargetPath)</LocalDebuggerCommand>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
-    <LocalDebuggerCommandArguments>-i test -o out</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>-i sz -o out</LocalDebuggerCommandArguments>
   </PropertyGroup>
 </Project>

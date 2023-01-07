@@ -63,6 +63,7 @@ void copy_pixel(
 	if (blend_f == 1.f) {
 		if (copy_fac) {
 			dst_f[dst_i] = src_f[src_i];
+			dst.hn[dst_i] = src.hn[src_i];
 		}
 		dst.d[dst_i] = src.d[src_i];
 		dst.n[dst_i] = src.n[src_i];
@@ -72,6 +73,7 @@ void copy_pixel(
 	} else {
 		if (copy_fac) {
 			dst_f[dst_i] = mix(dst_f[dst_i], src_f[src_i], blend_f);
+			dst.hn[dst_i] = mix(dst.hn[dst_i], src.hn[src_i], blend_f);
 		}
 		dst.d[dst_i] = mix(dst.d[dst_i], src.d[src_i], blend_f);
 		dst.n[dst_i] = mix(dst.n[dst_i], src.n[src_i], blend_f);
@@ -79,4 +81,10 @@ void copy_pixel(
 		dst.r[dst_i] = mix(dst.r[dst_i], src.r[src_i], blend_f);
 		dst.m[dst_i] = mix(dst.m[dst_i], src.m[src_i], blend_f);
 	}
+}
+
+
+inline float height_factor(float f, float h)
+{
+	return 1.f * f + (1.f - f) * (f * h);
 }

@@ -118,6 +118,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -132,6 +133,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="argument_reader.h" />
+    <ClInclude Include="FastNoiseLite.h" />
     <ClInclude Include="functions.h" />
     <ClInclude Include="loader.h" />
     <ClInclude Include="lodepng.h" />

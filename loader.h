@@ -48,6 +48,7 @@ void reserve_pbr(
 	pbr.d = std::vector<Col4>(size, Col4{ 0.f, 0.f, 0.f, 1.f });
 	pbr.n = std::vector<Vec3>(size, Vec3{ 0.f, 0.f, 0.f });
 	pbr.h = std::vector<float>(size, 0.f);
+	pbr.hn = std::vector<float>(size, 0.f);
 	pbr.r = std::vector<float>(size, 0.f);
 	pbr.m = std::vector<float>(size, 0.f);
 }

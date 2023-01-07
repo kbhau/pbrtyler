@@ -22,5 +22,8 @@
     <ClInclude Include="argument_reader.h" />
     <ClInclude Include="pixeltools.h" />
     <ClInclude Include="functions.h" />
+    <ClInclude Include="FastNoiseLite.h">
+      <Filter>external</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -58,5 +58,6 @@ public:
 	std::vector<Vec3> n;
 	std::vector<float> r;
 	std::vector<float> h;
+	std::vector<float> hn;
 	std::vector<float> m;
 };
