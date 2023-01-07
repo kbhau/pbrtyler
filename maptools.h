@@ -345,7 +345,8 @@ public:
 			int i = _i(x, y);
 			map.hn[i] = clamp(
 				map.h[i] * (1.f - height_noise_factor)
-					+ height_noise_factor * noise.GetNoise((float)x, (float)y),
+					+ height_noise_factor
+						* (noise.GetNoise((float)x, (float)y) * 0.5f + 0.5f),
 				0.f,
 				1.f
 			);
