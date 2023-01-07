@@ -131,6 +131,9 @@ void get_filenames(int argc, char** argv)
 	if (get_argument_flag("-cp", argc, argv)) {
 		influence_power = stof(get_argument_value("-cp", argc, argv));
 	}
+	if (get_argument_flag("-ht", argc, argv)) {
+		height_noise_factor = stof(get_argument_value("-ht", argc, argv));
+	}
 }
 
 
