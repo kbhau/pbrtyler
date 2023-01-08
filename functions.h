@@ -30,6 +30,19 @@ inline float factor_eps(float a, float b, float eps)
 }
 
 
+inline float factor_eps_top(float a, float b, float eps)
+{
+	float dist = a - b;
+	if (dist > eps) {
+		return 1.f;
+	} else if (dist < 0.f) {
+		return 0.f;
+	} else {
+		return dist / eps;
+	}
+}
+
+
 inline float gaussian_blur(int x, int y, float std_dev)
 {
 	float a = 1.f / (2.f * M_PI * std_dev * std_dev);

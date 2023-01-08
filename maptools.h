@@ -19,6 +19,8 @@ public:
 	unsigned int src_h;
 	unsigned int w;
 	unsigned int h;
+	float hnf;
+	float he;
 
 	inline int _i(int x, int y)
 	{
@@ -105,12 +107,7 @@ public:
 		bool blur
 	)
 	{
-		// pass in an empty base / destination - no, sample 5th map , w*h center in the middle  of source map
-
 		OP("4 way blend map begin.");
-
-		// Do the easy way - find the biggest ha and blend that into base.
-		// Each adjusted height only depends on its own domain.
 
 		OP("Reserving maps.");
 		std::vector<float> bm[4];
@@ -119,6 +116,9 @@ public:
 		}
 		std::vector<idedFloat> ha;
 		ha.resize(4);
+
+		std::vector< std::vector<idedFloat> > hb;
+		hb.resize(w*h);
 
 		OP("Compute blend factors.");
 		for (int y=0; y<h; ++y)
@@ -129,14 +129,10 @@ public:
 				ha[1].k = 1;
 				ha[2].k = 2;
 				ha[3].k = 3;
-				/*ha[0].v = s1.hn[i] * f1[i] + (1.f - f1[i]) * (f1[i] * s1.hn[i]);
-				ha[1].v = s2.hn[i] * f2[i] + (1.f - f2[i]) * (f2[i] * s2.hn[i]);
-				ha[2].v = s3.hn[i] * f3[i] + (1.f - f3[i]) * (f3[i] * s3.hn[i]);
-				ha[3].v = s4.hn[i] * f4[i] + (1.f - f4[i]) * (f4[i] * s4.hn[i]);*/
-				ha[0].v = height_factor(f1[i], s1.hn[i]);
-				ha[1].v = height_factor(f2[i], s2.hn[i]);
-				ha[2].v = height_factor(f3[i], s3.hn[i]);
-				ha[3].v = height_factor(f4[i], s4.hn[i]);
+				ha[0].v = height_factor(f1[i], s1.h[i]);
+				ha[1].v = height_factor(f2[i], s2.h[i]);
+				ha[2].v = height_factor(f3[i], s3.h[i]);
+				ha[3].v = height_factor(f4[i], s4.h[i]);
 
 				std::sort(
 					ha.begin(),
@@ -147,8 +143,24 @@ public:
 					}
 				);
 
-				bm[ha[0].k][i] = factor_eps(ha[0].v, ha[1].v, 0.01f);
-				//std::max((factor_eps(ha[0].v, ha[1].v, 0.01f) - 0.5f) * 2.f, 0.f);
+				// Top layer factor most important.
+				// Then factor underneath work in (1 - top factor).
+
+				for (int j=0; j<4; ++j) {
+					float sum_prev = 0.f;
+					for (int k=0; k<j; ++k) {
+						sum_prev += bm[ha[k].k][i];
+					}
+					if (j < 3) {
+						bm[ha[j].k][i] = (1.f - sum_prev)
+							* sqrt(sqrt(factor_eps(ha[j].v, ha[j+1].v, he)));
+					} else {
+						bm[ha[j].k][i] = (1.f - sum_prev)
+							* sqrt(sqrt(factor_eps(ha[j].v, 0.f, he)));
+					}
+				}
+
+				hb[i] = ha;
 			}
 
 		// Blur maps.
@@ -159,20 +171,36 @@ public:
 			}
 		}
 
-		OP("Mix in pixels.");
+		// Normalize factors - need to sum to 1.
 		for (int y=0; y<h; ++y)
 		for (int x=0; x<w; ++x) {
 			int i = _i(x, y);
-			copy_pixel(s1, dst, f1, f1, i, i, bm[0][i], false);
-			copy_pixel(s2, dst, f2, f2, i, i, bm[1][i], false);
-			copy_pixel(s3, dst, f3, f3, i, i, bm[2][i], false);
-			copy_pixel(s4, dst, f4, f4, i, i, bm[3][i], false);
+			float len = 0.f;
+			for (int j=0; j<4; ++j) {
+				len += bm[j][i];
+			}
+			for (int j=0; j<4; ++j) {
+				bm[j][i] /= len;
+			}
 		}
 
-		// The hard way would involve respecting the order of maps,
-		// then somehow bluring it. Probably many maps each for a specific
-		// order of blending. Lots of processing for a marginally better
-		// result, if at all.
+		OP("Mix in pixels.");
+		PBRMap* ss[4] = {
+			&s1, &s2, &s3, &s4
+		};
+		for (int y=0; y<h; ++y)
+		for (int x=0; x<w; ++x) {
+			int i = _i(x, y);
+			copy_pixel(*ss[0], dst, f1, f1, i, i, 1.f, false);
+			for (int j=3; j>=0; --j) {
+				int k = hb[i][j].k;
+				float v = hb[i][j].v;
+				copy_pixel(*ss[k], dst, f1, f1, i, i,
+					bm[k][i],
+					false
+				);
+			}
+		}
 
 		OP("4 way blend map end.");
 	}
@@ -333,6 +361,27 @@ public:
 	{
 		map = std::vector<float>(w*h, 0.0);
 	}
+
+
+	void apply_fac_noise(
+		std::vector<float>& map,
+		FastNoiseLite& noise,
+		float noise_factor
+	)
+	{
+		for (int y=0; y<h; ++y)
+		for (int x=0; x<w; ++x) {
+			int i = _i(x, y);
+			float f = clamp(
+				map[i] * (1.f - noise_factor)
+				+ noise_factor
+				* (noise.GetNoise((float)x, (float)y) * 0.5f + 0.5f),
+				0.f,
+				1.f
+			);
+			map[i] = 1.f * map[i] + (1.f - map[i]) * f;
+		}
+	};
 
 
 	void apply_height_noise(

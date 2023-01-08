@@ -76,8 +76,9 @@ using namespace std;
 string input;
 string output;
 bool blur;
-float influence_power = 0.375f;
-float height_noise_factor = 0.5f;
+float influence_power = 0.125f;
+float height_noise_factor = 0.8f;
+float height_epsilon = 0.03f;
 
 MapTools mt;
 unsigned int src_w = 0U;
@@ -127,12 +128,15 @@ void get_filenames(int argc, char** argv)
 
 	input = get_argument_value("-i", argc, argv);
 	output = get_argument_value("-o", argc, argv);
-	blur = !get_argument_flag("-nb", argc, argv);
-	if (get_argument_flag("-cp", argc, argv)) {
-		influence_power = stof(get_argument_value("-cp", argc, argv));
+	blur = !get_argument_flag("-noblur", argc, argv);
+	if (get_argument_flag("-sharpness", argc, argv)) {
+		influence_power = stof(get_argument_value("-sharpness", argc, argv));
 	}
-	if (get_argument_flag("-ht", argc, argv)) {
-		height_noise_factor = stof(get_argument_value("-ht", argc, argv));
+	if (get_argument_flag("-noise", argc, argv)) {
+		height_noise_factor = stof(get_argument_value("-noise", argc, argv));
+	}
+	if (get_argument_flag("-epsilon", argc, argv)) {
+		height_noise_factor = stof(get_argument_value("-epsilon", argc, argv));
 	}
 }
 
@@ -149,6 +153,8 @@ int read_source_maps()
 		mt.src_h = src_h;
 		mt.w = w;
 		mt.h = h;
+		mt.hnf = height_noise_factor;
+		mt.he = height_epsilon;
 		OP("w=[" << w << "] h=[" << h << "]");
 	} catch (std::exception e) {
 		OP("Could not load source maps.");
@@ -250,21 +256,22 @@ void apply_height_noise()
 	OP("- Apply height noise.");
 	FastNoiseLite ns;
 	ns.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-	ns.SetFrequency(1.f / (float)w);
+	ns.SetFrequency(1.5f / (float)w);
 	ns.SetFractalGain(0.5);
 	ns.SetFractalLacunarity(2.f);
-	ns.SetFractalOctaves(3);
+	ns.SetFractalOctaves(8
+	);
 	
 	std::srand(std::time(0));
 
 	ns.SetSeed(std::rand());
-	mt.apply_height_noise(base, ns, height_noise_factor);
+	mt.apply_fac_noise(fac_base, ns, height_noise_factor);
 	ns.SetSeed(std::rand());
-	mt.apply_height_noise(sc1, ns, height_noise_factor);
+	mt.apply_fac_noise(fac_sc1, ns, height_noise_factor);
 	ns.SetSeed(std::rand());
-	mt.apply_height_noise(sc2, ns, height_noise_factor);
+	mt.apply_fac_noise(fac_sc2, ns, height_noise_factor);
 	ns.SetSeed(std::rand());
-	mt.apply_height_noise(sc3, ns, height_noise_factor);
+	mt.apply_fac_noise(fac_sc3, ns, height_noise_factor);
 }
 
 
