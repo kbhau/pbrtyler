@@ -29,11 +29,17 @@ out_image_n.png
 ## Supported parameters:
 
 `-i <input_path>` - Input filename without extension.
+
 `-o <output_path>` - Output filename without extension.
+
 `-noblur` - Skips blurring of blend maps.
+
 `-sharpness 0.125` - How "sharp" the transitions look.
+
 `-noise 0.8` - How much the noise influences blending.
+
 `-epsilon 0.03` - The delta of heights below which pixels will blend.
+
 
 ## Workflow
 
