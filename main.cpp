@@ -136,7 +136,7 @@ void get_filenames(int argc, char** argv)
 		height_noise_factor = stof(get_argument_value("-noise", argc, argv));
 	}
 	if (get_argument_flag("-epsilon", argc, argv)) {
-		height_noise_factor = stof(get_argument_value("-epsilon", argc, argv));
+		height_epsilon = stof(get_argument_value("-epsilon", argc, argv));
 	}
 }
 
